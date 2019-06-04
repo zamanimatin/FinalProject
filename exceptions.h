@@ -66,6 +66,6 @@ public:
     virtual const char* what() const throw() {return message;}
 private:
     const string type = "Username Error";
-    const char* message = "Username entered maybe used by other user or you're using 'admin' username!";
+    const char* message = "Username entered maybe used by other user,or you're using 'admin' username!";
 };
 #endif
