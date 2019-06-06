@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>Add Film</title>
+    </head>
+    <body style="text-align: center;color: black;background: url(https://www.stickpng.com/assets/images/580b57fcd9996e24bc43c529.png);background-repeat: no-repeat;background-size: 100% 100%;">
+        <h1>ADD A NEW FILM TO YOUR DIRCTORY</h1>
+        <br /><br /><br/><br/><br/><br/>
+        <div style="background-color: goldenrod;padding: 1%;max-width: 300px; border-radius: 3px;margin: auto; color: blue;border: transparent;color:black;font-size: 15px; text-align: left"> 
+            <h2>FILM INFO</h2>
+            <form action="/newfilm" method="POST">
+                <br/><br/>
+                <input name="name" type="text" placeholder="Name" style="display:block; margin: auto; margin-bottom: 10px; padding: 5px; width: 94%;"required />
+                <input name="director" type="text" placeholder="Film Director" style="display:block; margin: auto; margin-bottom: 30px; padding: 5px; width: 94%;" required/>
+                <input name="length" type="text" placeholder="Film Length" style="display:block; margin: auto; margin-bottom: 30px; padding: 5px; width: 94%;" required/>
+                <input name="year" type="text" placeholder="Production Year" style="display:block; margin: auto; margin-bottom: 30px; padding: 5px; width: 94%;"required />
+                <input name="price" type="text" placeholder="Price" style="display:block; margin: auto; margin-bottom: 30px; padding: 5px; width: 94%;"required />
+                <input name="rate" type="text" placeholder="Rate" style="display:block; margin: auto; margin-bottom: 30px; padding: 5px; width: 94%;"required />
+                <input name="summary" type="text" placeholder="Summary" style="display:block; margin: auto; margin-bottom: 30px; padding: 5px; width: 94%;"required />
+                <br/>
+                <button type="submit" style="display:block; width: 100%; padding: 7px;">ADD THIS FILM</button>
+            </form>
+        </div>
+        <form action="/" method="POST">
+            <button type="submit" style="color:red ; display: block; width:100px;height: 40px;position: relative; left:0px; top:10px;">Logout</button>
+        </form>
+    </body>
+</html>
