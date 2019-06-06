@@ -258,10 +258,7 @@ bool CommandProcessor::is_valid_q_mark(string command)
 void CommandProcessor::make_add_new_user(string command,MI& central_info)
 {
     if(!(this->signup_check(command,central_info)))
-    {
-        throw WrongRequest();
         return ;
-    }
     string query = this->return_query(command);
     string username = this->get_desired_info(query,"username");
     long unsigned int password = this->hash_password(
@@ -694,7 +691,8 @@ bool CommandProcessor::check_process_comment_on_a_film(string command,MI central
         {
             return true;   
         }
-        else if(des->get_id()==usr->get_bought_films()[i]->get_id()&&i==usr->get_bought_films().size()-ONE)
+        else if(des->get_id()==usr->get_bought_films()[i]->get_id()
+        &&i==usr->get_bought_films().size()-ONE)
         {
             throw ExistenceError();
             return false;
@@ -733,7 +731,6 @@ bool CommandProcessor::check_process_rate(string command,MI central_info)
         throw WrongRequest();
         return false;
     }
-    Film* des = central_manager->find_film_with_id(fid);
     if(!(central_manager->is_film_exists(fid)))
     {
         throw ExistenceError();
@@ -1177,6 +1174,27 @@ bool CommandProcessor::add_film_check(string command,MI central_info)
     }
     return true;
 }
+void CommandProcessor::add_film_for_a_publisher(string name,string Year,string Length,
+string Price,string summary,string rate,string director,MI& central_info)
+{
+    int price = stoi(Price);
+    int year = stoi(Year);
+    int length = stoi(Length);
+    Film* new_film = new Film(central_info.current_user_id,name,
+            central_info.central_film_id,ZERO,price,year,director,length,summary);
+    for(int i=0;i<central_manager->get_data_base_all_publishers().size();i++)
+    {
+        if(central_info.current_user_id == central_manager->get_data_base_all_publishers()[i]->get_id())
+        {
+            central_manager->get_data_base_all_publishers()[i]->add_an_uploaded_film(new_film);
+            central_manager->change_central_info(central_info,
+            CENTRAL_FILM_ID,central_info.current_user_id,PUBLISHER_ONLINE);
+            central_manager->get_data_base_all_publishers()[i]->send_new_film_notice();   
+            central_manager->add_a_film_to_data_base(new_film);
+            cout<<"OK"<<endl;
+        }
+    }
+}
 void CommandProcessor::add_film_for_a_publisher(string command,MI& central_info)
 {
     if(!(this->add_film_check(command,central_info)))
@@ -1235,7 +1253,7 @@ bool CommandProcessor::login_check(string command,MI central_info)
                 return false;
             }
         }
-    if(username=="admin"&&this->hash_password("admin"))
+    if(username=="admin"&&this->hash_password("admin")==hashed_password)
         return true;
     throw ExistenceError();
     return false;

@@ -35,6 +35,8 @@ public:
     bool remove_film_check(string command,MI central_info);
     bool is_email_valid(const std::string& email);
     void add_film_for_a_publisher(string command,MI& central_info);
+    void add_film_for_a_publisher(string name,string Year,string Length,string Price
+    ,string summary,string rate,string director,MI& central_info);
     void edit_a_film_data_for_a_publisher(string command,MI central_info);
     void process_show(string command,MI& central_info);
     bool process_show_check(string command,MI central_info);

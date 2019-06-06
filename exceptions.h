@@ -57,7 +57,7 @@ public:
     virtual const char* what() const throw() {return message;}
 private:
     const string type = "Empty Field Error";
-    const char* message = "One of the field is empty!";
+    const char* message = "One of the fields is empty!";
 };
 class UsernameError : public std::exception
 {
@@ -67,5 +67,23 @@ public:
 private:
     const string type = "Username Error";
     const char* message = "Username entered maybe used by other user or you're using 'admin' username!";
+};
+class AgeError : public std::exception
+{
+public:
+    AgeError(){}
+    virtual const char* what() const throw() {return message;}
+private:
+    const string type = "Age Error";
+    const char* message = "Age entered is not valid";
+};
+class WrongPassError : public std::exception
+{
+public:
+    WrongPassError(){}
+    virtual const char* what() const throw() {return message;}
+private:
+    const string type = "Wrong Pass Error";
+    const char* message = "Wrong Password Entered";
 };
 #endif

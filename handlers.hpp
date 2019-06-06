@@ -2,33 +2,68 @@
 #define _MY_HANDLERS_
 
 #include "../server/server.hpp"
-#include <cstdlib> // for rand and srand
-#include <ctime>   // for time
+#include <cstdlib> 
+#include <ctime>   
 #include <iostream>
+#include "manager.h"
+#include "exceptions.h"
+#include "commandprocessor.h"
+#include "info.h"
 
-class RandomNumberHandler : public RequestHandler {
+class SignupHandler : public RequestHandler
+{
 public:
-  Response *callback(Request *);
+    SignupHandler(Manager*m,CommandProcessor* c);
+    Response *callback(Request*);
+protected:
+    Manager* manager;
+    CommandProcessor* commander;
 };
-
 class LoginHandler : public RequestHandler {
 public:
-  Response *callback(Request *);
-  void set_manager(Manager* m){manager=m;}
+    LoginHandler(Manager* m,CommandProcessor* c);
+    Response *callback(Request *);
 protected:
   Manager* manager;
-
+  CommandProcessor* commander;
 };
-
-class UploadHandler : public RequestHandler {
+class UserHandler : public RequestHandler
+{
 public:
-  Response *callback(Request *);
+    UserHandler(Manager* m,CommandProcessor* c);
+    Response *callback(Request*);
+    string make_html_dynamic_code(Publisher*);
+protected:
+    Manager* manager;
+    CommandProcessor* commander;
 };
-
-class ColorHandler : public TemplateHandler {
+class ProfileHandler : public RequestHandler
+{
 public:
-  ColorHandler(std::string filePath);
-  std::map<std::string, std::string> handle(Request *req);
+    ProfileHandler(Manager*m,CommandProcessor*c);
+    Response *callback(Request*);
+    string make_html_dynamic_code(User*);
+protected:
+    Manager* manager;
+    CommandProcessor* commander;
+};
+class NewFilmHandler : public RequestHandler
+{
+public:
+    NewFilmHandler(Manager*m,CommandProcessor* c);
+    Response *callback(Request*);
+private:
+    Manager* manager;
+    CommandProcessor* commander;
+};
+class LogoutHandler : public RequestHandler
+{
+public:
+    LogoutHandler(Manager* m,CommandProcessor* c);
+    Response *callback(Request*);    
+protected:
+    Manager* manager;
+    CommandProcessor* commander;
 };
 
 #endif

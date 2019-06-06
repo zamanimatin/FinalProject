@@ -60,6 +60,11 @@ MI Manager::change_central_info(MI& central_info,string data,int user_id,int new
     central_info.current_user_id = user_id;
     return central_info;
 }
+MI change_session_id(MI& central_info)
+{
+    central_info.central_session_id++;
+    return central_info;
+}
 vector<User*> Manager::concat_user_vectors()
 {
     vector<User*> all_users;
@@ -416,6 +421,14 @@ Publisher* Manager::find_publisher_with_id(int publisher_id)
     for(int i=0;i<data_base_all_publishers.size();i++)
         if(data_base_all_publishers[i]->get_id()==publisher_id)
             return data_base_all_publishers[i];
+    return NULL;
+}
+Customer* Manager::find_customer_with_id(int customer_id)
+{
+    for(int i=0;i<data_base_all_customers.size();i++)
+        if(data_base_all_customers[i]->get_id()==customer_id)
+            return data_base_all_customers[i];
+    return NULL;
 }
 void Manager::follow_a_publisher_for_a_customer(int publisher_id)
 {
@@ -746,7 +759,8 @@ void Manager::login_customer(string username,MI& central_info)
         }
     }
 }
-void Manager::signup_publisher(string username,long unsigned int password,string email,int age,MI& central_info)
+void Manager::signup_publisher(string username,
+long unsigned int password,string email,int age,MI& central_info)
 {
     vector<Film*> publisher_buy_film;
     vector<User*> publisher_followers;
@@ -762,7 +776,8 @@ void Manager::signup_publisher(string username,long unsigned int password,string
     SYSTEM_SIT,central_info.current_user_id,PUBLISHER_ONLINE);
     cout<<"OK"<<endl;
 }
-void Manager::signup_customer(string username,long unsigned int password,string email,int age,MI& central_info)
+void Manager::signup_customer(string username,
+long unsigned int password,string email,int age,MI& central_info)
 {
     vector<Film*> _bought_films;
     vector<User*> _followed_publishers;
@@ -851,4 +866,75 @@ vector<int> Manager::find_common_customers_with_film_id(int film_id)
     for(auto iter = data_base_films_graph.begin();iter!=data_base_films_graph.end();iter++)
         if(iter->first==film_id)
             return iter->second;
+}
+bool Manager::check_signup_params(string username,string password,
+string re_password,string email,string age,string publisher_sit,MI central_info)
+{
+    if(central_info.system_sit!=NO_USER_ONLINE&&central_info.system_sit!=SYSTEM_QUIT)
+    {
+        throw AccessError();
+        return false;
+    }
+    if(!(this->email_validation(email)))
+    {
+        throw NotValidEmailError();
+        return false;
+    }
+    if(publisher_sit.size()!=0)
+        if(publisher_sit!="true"&&publisher_sit!="false")
+        {
+            throw WrongRequest();
+            return false;
+        }
+    if(password!=re_password)
+    {
+        throw NotEqualPassError();
+        return false;
+    }
+    for(int i=0;i<this->concat_user_vectors().size();i++)
+        if(this->concat_user_vectors()[i]->get_username()
+         == username||username =="admin")
+        {
+            throw UsernameError();
+            return false;
+        }
+    return true;
+}
+bool Manager::email_validation(const std::string& email)
+{
+    const std::regex pattern
+      ("(\\w+)(\\.|_)?(\\w*)@(\\w+)(\\.(\\w+))+");
+    return std::regex_match(email, pattern);
+}
+bool Manager::check_login_params(string username,string password,long unsigned int hash,MI central_info)
+{   
+    if(central_info.system_sit!=SYSTEM_QUIT&&central_info.system_sit!=NO_USER_ONLINE)
+    {
+        throw AccessError();
+        return false;
+    }
+    long unsigned int hashed = this->password_hasher(password.c_str());
+    for(int i=0;i<this->concat_user_vectors().size();i++)
+    {
+        if(this->concat_user_vectors()[i]->get_username()==username)
+        {
+            if(this->concat_user_vectors()[i]->get_password()==hashed)
+                return true;
+            else if(this->concat_user_vectors()[i]->get_password()!=hashed)
+            {
+                throw WrongPassError();
+                return false;
+            }
+        }
+    }
+    if(username=="admin"&&this->password_hasher("admin")==hashed)
+        return true;
+    return false;
+}
+long unsigned int Manager::password_hasher(const char* password)
+{
+    long unsigned int hash = 0;
+    while (*password)
+        hash = (hash * 10) + *password++ - '0';
+    return hash;   
 }
