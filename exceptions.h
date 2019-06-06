@@ -21,7 +21,7 @@ public:
     virtual const char* what() const throw() {return message;}
 private:
     const string type = "Wrong Request";
-    const char* message = "Bad request";
+    const char* message = "Bad Request";
 };
 class AccessError : public std::exception
 {
