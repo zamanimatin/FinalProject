@@ -11,12 +11,11 @@ public:
     User(int _id,string _user_name,long unsigned int _password,
     string _email,int _age,int _money,vector<Film*> _bought_films);
     void add_bought_film(Film* f);
+    void increase_money(int m);
+    void decrease_money(int m);
     void show_unreads();
     void show_reads(int limit);
     void show_all_films();
-    virtual void increase_money(int m){}
-    virtual void decrease_money(int m){}
-    virtual void set_money(int m){}
     void show_filtered_films(string name,int price,int min_year,int max_year,string director);
     void show_purchased_films(string name,int price,int min_year,int max_year,string director);
     bool does_have_film(int film_id);
@@ -42,7 +41,7 @@ protected:
     long unsigned int password;
     string email;
     int age;
-    int money=0;
+    int money;
     vector<Film*> bought_films;
     vector<User*> followed_publishers;
     map <int, string> unread_notices;

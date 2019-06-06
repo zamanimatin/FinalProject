@@ -82,6 +82,7 @@ void Film::set_new_rate(float _rate)
     prev+=_rate;
     this->increase_raters();
     rate = prev/num_rater;
+
 }
 void Film::show_deteils()
 {
@@ -90,7 +91,6 @@ void Film::show_deteils()
     cout<<"Director = "<<director<<endl;
     cout<<"Length = "<<length<<endl;
     cout<<"Year = "<<year<<endl;
-    summary = this->make_summary_to_desired(summary);
     cout<<"Summary = "<<summary<<endl;
     cout<<"Rate = "<<rate<<endl;
     cout<<"Price = "<<price<<endl;
@@ -98,35 +98,22 @@ void Film::show_deteils()
     this->show_comments();
     cout<<endl;    
 }
-string Film::make_summary_to_desired(string summary)
-{
-    for(int i=0;i<summary.size();i++)
-    {
-        if(summary[i]==' ')
-            summary[i]=LINE_MARK;
-    }
-    return summary;
-}
 void Film::show_comments()
 {
-    cout<<"Comments"<<endl;
     for(auto iter1 = comments.begin();iter1!=comments.end();iter1++)
     {
         cout<<iter1->first;
-        map<int ,string> usr_comments = iter1->second;
-        for(auto iter2 = usr_comments.begin();iter2!=usr_comments.end();iter2++)
+        for(auto iter2 = comments[iter1->first].begin();iter2!=comments[iter1->first].end();iter2++)
         {
             cout<<". "<<iter2->second<<endl;
             this->show_responds(iter1->first);
         }
     }
-    cout<<endl;
 }
 void Film::show_responds(int comment_id)
 {
     int i=1;
-    map<int ,string> usr_responds = responds.at(comment_id);
-    for(auto iter = usr_responds.begin();iter!=usr_responds.end();iter++)
+    for(auto iter = responds[comment_id].begin();iter!=responds[comment_id].end();iter++)
     {
         cout<<comment_id<<i<<"."<<". "<<iter->second<<endl;
     }
@@ -139,6 +126,7 @@ void Film::delete_a_comment_with_id(int id)
             comments.erase(iter);
             return ;
         }
+    throw AccessError();
 }
 void Film::delete_a_comment_related_responds(int comment_id)
 {

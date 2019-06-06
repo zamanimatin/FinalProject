@@ -11,9 +11,6 @@ public:
     vector<Film*> bought_films,vector<Film*> uploaded_films,vector<User*> followers);
     void add_an_uploaded_film(Film* f);
     void add_a_follower(User* f);
-    void increase_money(int m);
-    void decrease_money(int m);
-    void set_money(int m){money=m;}
     void set_uploaded_films(vector<Film*> v){uploaded_films = v;}
     void set_followers(vector<User*> f){followers = f;}
     void show_list_of_followers();

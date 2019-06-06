@@ -23,7 +23,6 @@ public:
     void add_a_respond(int related_commenter_id,string respond);
     int get_last_comment_id();
     int get_last_respond_id();
-    string make_summary_to_desired(string summary);
     void increase_raters(){num_rater++;}
     int get_publisher_id(){return publisher_id;}
     string get_name(){return name;}

@@ -8,9 +8,6 @@ public:
     Customer(int _id,string _user_name,long unsigned int _password,string _email,int _age,int _money,
     vector<Film*> _bought_films,vector<User*> _followed_publishers);
     void add_a_publisher(User* p);
-    void increase_money(int m);
-    void decrease_money(int m);
-    void set_money(int m){money=m;}
     vector<User*> get_followed_publishers(){return followed_publishers;}
     const string get_type(){return type;}
 private:

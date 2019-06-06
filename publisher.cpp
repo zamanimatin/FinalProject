@@ -13,16 +13,6 @@ void Publisher::add_an_uploaded_film(Film* f)
 {
     uploaded_films.push_back(f);
 }
-void Publisher::increase_money(int m)
-{
-    money += m;
-    int new_num = money;
-    this->set_money(new_num);
-}
-void Publisher::decrease_money(int m)
-{
-    money -= m;
-}
 void Publisher::add_a_follower(User* f)
 {
     followers.push_back(f);

@@ -36,12 +36,8 @@
 #define CENTRAL_COMMENT_ID "central_comment_id"
 #define SYSTEM_SIT "system_sit"
 #define CURRENT_USER_ID "current_user_id"
-#define CENTRAL_SESSION_ID "central_session_id"
 #define PUBLISHER_ONLINE 1
 #define CUSTOMER_ONLINE 2
-#define ADMIN_ONLINE 3
-#define ADMIN_USER_ID 0
-#define ADMIN_EMAIL "admin@gmail.com"
 #define NO_USER_ONLINE 0
 #define SYSTEM_QUIT -1
 using namespace std;
@@ -55,7 +51,6 @@ struct main_info
     int central_film_id = 1;
     int central_comment_id = 1;
     int central_message_id = 1;
-    int central_session_id = 1;
 };
 
 #endif

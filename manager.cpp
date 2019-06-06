@@ -6,7 +6,6 @@ void Manager::add_a_film_to_data_base(Film* f)
     int rest = f->get_price() - publisher_contribute;
     this->increase_system_salary(rest);
     data_base_all_films.push_back(f);
-    this->add_a_film_to_data_base_graph(f);
     
 }
 void Manager::add_a_publisher_to_data_base(Publisher* p)
@@ -58,11 +57,6 @@ MI Manager::change_central_info(MI& central_info,string data,int user_id,int new
         central_info.system_sit = new_system_sit;
     }
     central_info.current_user_id = user_id;
-    return central_info;
-}
-MI change_session_id(MI& central_info)
-{
-    central_info.central_session_id++;
     return central_info;
 }
 vector<User*> Manager::concat_user_vectors()
@@ -126,9 +120,13 @@ void Manager::comment_on_a_film_for_user(int film_id,string content)
         " comment on your film "+desired_film->get_name()+" with id "+
         to_string(desired_film->get_id())+" .");
     }
+    else 
+        throw AccessError();
+
 }
 void Manager::rate_a_film_for_user(int film_id,float score)
 {
+    cout<<"in for user"<<endl;
     User* desired = this->find_user_with_id(client_id);
     vector<Film*>user_films = desired->get_bought_films();
     Film* desired_film;
@@ -141,6 +139,8 @@ void Manager::rate_a_film_for_user(int film_id,float score)
         +to_string(desired->get_id())+" rate your film "+desired_film->get_name()+" with id "
         +to_string(desired_film->get_id()));
     }
+    else
+        throw AccessError();
 }
 bool Manager::is_film_exists(int film_id)
 {
@@ -164,15 +164,9 @@ void Manager::buy_film_for_user(int film_id)
         this->add_money_for_publisher_contribute(desired_film->get_publisher_id(),film_id);
         int system_share = desired_film->get_price()-desired_film->calc_publisher_share();
         this->increase_system_salary(system_share);
-        this->change_data_base_graph_for_this_film(film_id);
     }
-}
-void Manager::change_data_base_graph_for_this_film(int film_id)
-{
-    vector<int > common_users;
-    Film* des = this->find_film_with_id(film_id);
-    common_users = this->find_common_customer_with_other_films(des);
-    this->set_new_common_customers_for_film(film_id,common_users);
+    else
+        throw WrongRequest();   
 }
 void Manager::add_money_for_publisher_contribute(int publisher_id,int film_id)
 {
@@ -183,6 +177,7 @@ void Manager::add_money_for_publisher_contribute(int publisher_id,int film_id)
 }
 void Manager::show_film_comments(int fid)
 {
+    cout<<"Comments"<<endl;
     int i=1;
     for(int i=0;i<data_base_all_films.size();i++)
     {
@@ -197,16 +192,6 @@ void Manager::show_film_comments(int fid)
             }
         }
     }
-}
-bool Manager::is_film_exists_in_user_films(int user_id,int film_id)
-{
-    User* usr = this->find_user_with_id(user_id);
-    for(int i=0;i<usr->get_bought_films().size();i++)
-    {
-        if(usr->get_bought_films()[i]->get_id()==film_id)
-            return true;
-    }
-    return false;
 }
 void Manager::show_film_details_for_user(int film_id)
 {
@@ -228,41 +213,28 @@ void Manager::show_recommends(int film_id)
         cout<<recommened_films[i]->get_director()<<endl;
     }
 }
-int Manager::calc_num_of_vector_max_values(vector<int>v)
+Film* Manager::find_film_with_highest_rate(vector<Film*>all_films)
 {
-    int max = *max_element(v.begin(),v.end());
-    int count = 0;
-    for(int i=0;i<v.size();i++)
-        if(max==v[i])
-            count++;
-    return count;
+    Film*desired = all_films[0];
+    for(int i=0;i<all_films.size();i++)
+    {
+        if(all_films[i]->get_rate()>desired->get_rate())
+            desired = all_films[i];
+    }
+    return desired;
 }
 vector<Film*> Manager::find_top_four_films(int film_id)
 {
     vector<Film*> all_films = data_base_all_films;
     vector<Film*> desired_films;
-    vector<int> num_of_common_users = this->find_common_customers_with_film_id(film_id);
-    int maximum_common; 
-    int num_of_max;
-    vector<int> index;
-    int num_of_films = 4;
-    if(data_base_all_films.size()<4)
-        num_of_films = data_base_all_films.size();
-    for(int j=0;j<num_of_films;j++)
+    for(int i=0;desired_films.size()!=4;i++)
     {
-        maximum_common = *max_element(num_of_common_users.begin(),num_of_common_users.end());
-        num_of_max = this->calc_num_of_vector_max_values(num_of_common_users);
-        for(int i=1;i<num_of_common_users.size();i++)
+        Film* highest_rate = this->find_film_with_highest_rate(all_films);
+        if(highest_rate->get_id()!=film_id)
         {
-            if(num_of_common_users[i]==maximum_common)
-            {
-                index.push_back(i);
-                num_of_common_users[i] = ZERO;
-            }
+            desired_films.push_back(highest_rate);
+            all_films = this->erase_film_with_id(highest_rate->get_id(),all_films);
         }
-        Film* desired = this->find_film_with_id(index[ZERO]+ONE);
-        if(desired->get_id()!=film_id&&!(this->is_film_exists_in_user_films(client_id,film_id)));
-            desired_films.push_back(desired);
     }
     return desired_films;
 }
@@ -402,6 +374,7 @@ void Manager::reply_to_a_comment_for_publisher(int film_id,int comment_id,string
             return;
         }
     }
+    throw AccessError();
 }
 void Manager::remove_a_comment_for_publisher(int film_id,int comment_id)
 {
@@ -414,6 +387,8 @@ void Manager::remove_a_comment_for_publisher(int film_id,int comment_id)
             des_publisher->get_uploaded_films()[i]->delete_a_comment_with_id(comment_id);
             des_publisher->get_uploaded_films()[i]->delete_a_comment_related_responds(comment_id);
         }
+        else
+            throw AccessError();
     }
 }
 Publisher* Manager::find_publisher_with_id(int publisher_id)
@@ -421,14 +396,6 @@ Publisher* Manager::find_publisher_with_id(int publisher_id)
     for(int i=0;i<data_base_all_publishers.size();i++)
         if(data_base_all_publishers[i]->get_id()==publisher_id)
             return data_base_all_publishers[i];
-    return NULL;
-}
-Customer* Manager::find_customer_with_id(int customer_id)
-{
-    for(int i=0;i<data_base_all_customers.size();i++)
-        if(data_base_all_customers[i]->get_id()==customer_id)
-            return data_base_all_customers[i];
-    return NULL;
 }
 void Manager::follow_a_publisher_for_a_customer(int publisher_id)
 {
@@ -668,8 +635,7 @@ void Manager::increase_user_money(int amount,MI central_info)
     {
         if(data_base_all_publishers[i]->get_id()==client_id)
         {
-            data_base_all_publishers[i]->increase_money(amount);
-            cout<<"OK"<<endl;
+            data_base_all_customers[i]->increase_money(amount);
             return;
         }
     }
@@ -696,245 +662,4 @@ string year,string length,string summary,string director)
     for(int i=0;i<data_base_all_publishers.size();i++)
         if(data_base_all_publishers[i]->get_id()==Pub_id)
             data_base_all_publishers[i]->edit_a_film(fil_id,name,year,length,summary,director);
-}
-bool Manager::is_publisher(string username)
-{
-    for(int i=0;i<data_base_all_publishers.size();i++)
-        if(data_base_all_publishers[i]->get_username()==username)
-            return true;
-    return false;
-}
-bool Manager::is_customer(string username)
-{
-    for(int i=0;i<data_base_all_customers.size();i++)
-        if(data_base_all_customers[i]->get_username()==username)    
-            return true;
-    return false;
-}
-bool Manager::is_admin(string username)
-{
-    if(username=="admin")
-        return true;
-    return false;
-}
-void Manager::login_admin(string username,long unsigned int password,MI& central_info)
-{
-    central_info = this->change_central_info(central_info,SYSTEM_SIT,ZERO,ADMIN_ONLINE);
-    this->set_client_data(ZERO,"admin",password,ADMIN_EMAIL,ZERO,false);
-    cout<<"OK"<<endl;
-}
-void Manager::login_publisher(string username,MI& central_info)
-{
-    for(int i=0;i<data_base_all_publishers.size();i++)
-    {
-        if(username == data_base_all_publishers[i]->get_username())
-        {
-            this->change_central_info(central_info,
-            SYSTEM_SIT,data_base_all_publishers[i]->get_id(),PUBLISHER_ONLINE);
-            this->set_client_data(data_base_all_publishers[i]->get_id(),
-            data_base_all_publishers[i]->get_username(),
-            data_base_all_publishers[i]->get_password(),
-            data_base_all_publishers[i]->get_email(),
-            data_base_all_publishers[i]->get_age(),true);
-            cout<<"OK"<<endl;
-            return ;
-        }
-    }
-}
-void Manager::login_customer(string username,MI& central_info)
-{
-    for(int i=0;i<data_base_all_customers.size();i++)
-    {
-        if(username == data_base_all_customers[i]->get_username())
-        {
-            this->change_central_info(central_info,
-            SYSTEM_SIT,data_base_all_customers[i]->get_id(),CUSTOMER_ONLINE);
-            this->set_client_data(data_base_all_customers[i]->get_id(),
-            data_base_all_customers[i]->get_username(),
-            data_base_all_customers[i]->get_password(),
-            data_base_all_customers[i]->get_email(),
-            data_base_all_customers[i]->get_age(),false);
-            cout<<"OK"<<endl;
-            return ;
-        }
-    }
-}
-void Manager::signup_publisher(string username,
-long unsigned int password,string email,int age,MI& central_info)
-{
-    vector<Film*> publisher_buy_film;
-    vector<User*> publisher_followers;
-    vector<Film*> publisher_sent_film;
-    Publisher* newpub;
-    newpub = new Publisher(central_info.central_client_id,username,password,email,age,ZERO,
-    publisher_buy_film,publisher_sent_film,publisher_followers);
-    this->add_a_publisher_to_data_base(newpub);
-    this->set_client_data(central_info.central_client_id,username,password,email,age,true);
-    central_info = this->change_central_info(central_info,
-    CENTRAL_CLIENT_ID,central_info.central_client_id,PUBLISHER_ONLINE);
-    central_info = this->change_central_info(central_info,
-    SYSTEM_SIT,central_info.current_user_id,PUBLISHER_ONLINE);
-    cout<<"OK"<<endl;
-}
-void Manager::signup_customer(string username,
-long unsigned int password,string email,int age,MI& central_info)
-{
-    vector<Film*> _bought_films;
-    vector<User*> _followed_publishers;
-    Customer* newcus = new Customer(central_info.central_client_id,username,password,email,age,
-    ZERO,_bought_films,_followed_publishers);
-    this->add_a_customer_to_data_base(newcus);
-    this->set_client_data(central_info.central_client_id,username,password,email,age,false);
-    central_info = this->change_central_info(central_info,
-    CENTRAL_CLIENT_ID,central_info.current_user_id,CUSTOMER_ONLINE);
-    central_info = this->change_central_info(central_info,
-    SYSTEM_SIT,central_info.current_user_id,CUSTOMER_ONLINE);
-    cout<<"OK"<<endl;
-}
-void Manager::show_get_money(MI central_info)
-{
-    if(central_info.current_user_id==ADMIN_USER_ID)
-        cout<<system_salary<<endl;
-    else
-    {
-        User* usr = this->find_user_with_id(central_info.current_user_id);
-        cout<<usr->get_money()<<endl;
-    }
-}
-void Manager::add_a_film_to_data_base_graph(Film*f)
-{
-    int fid = f->get_id();
-    vector<int > related_films;
-    for(int i=0;i<data_base_all_films.size();i++)
-        related_films.push_back(ZERO);
-    data_base_films_graph.insert({fid,related_films});
-}
-void Manager::set_new_common_customers_for_film(int fid,vector<int> related_films)
-{
-    for(auto iter=data_base_films_graph.begin();iter!=data_base_films_graph.end();iter++)
-    {
-        if(iter->first==fid)
-        {
-            iter->second = related_films;
-        }
-    }
-}
-int Manager::calc_num_of_common_customers(Film* f1,Film* f2)
-{
-    vector<User*> all_users = this->concat_user_vectors();
-    vector<Film*> user_films;
-    int common_users = 0;
-    for(int i=0;i<all_users.size();i++)
-    {
-        user_films = all_users[i]->get_bought_films();
-        for(int j=0;j<user_films.size();j++)
-        {
-            if(user_films[j]->get_id()==f1->get_id())
-            {
-                for(int k=0;k<user_films.size();k++)
-                {
-                    if(user_films[k]->get_id()==f2->get_id())
-                    {
-                        common_users++;
-                    }
-                }
-            }
-        }
-    }
-    return common_users;
-}
-vector<int> Manager::find_common_customer_with_other_films(Film*f)
-{
-    int fid;
-    int film_id = f->get_id();
-    vector<int > common_users;
-    int count = 0;
-    for(int i=0;i<data_base_all_films.size();i++)
-    {
-        if(i==film_id-ONE)
-            common_users.push_back(ZERO);
-        else
-        {
-            count = this->calc_num_of_common_customers(f,data_base_all_films[i]);
-            common_users.push_back(count);
-        }  
-    }
-    return common_users;
-}
-vector<int> Manager::find_common_customers_with_film_id(int film_id)
-{
-    for(auto iter = data_base_films_graph.begin();iter!=data_base_films_graph.end();iter++)
-        if(iter->first==film_id)
-            return iter->second;
-}
-bool Manager::check_signup_params(string username,string password,
-string re_password,string email,string age,string publisher_sit,MI central_info)
-{
-    if(central_info.system_sit!=NO_USER_ONLINE&&central_info.system_sit!=SYSTEM_QUIT)
-    {
-        throw AccessError();
-        return false;
-    }
-    if(!(this->email_validation(email)))
-    {
-        throw NotValidEmailError();
-        return false;
-    }
-    if(publisher_sit.size()!=0)
-        if(publisher_sit!="true"&&publisher_sit!="false")
-        {
-            throw WrongRequest();
-            return false;
-        }
-    if(password!=re_password)
-    {
-        throw NotEqualPassError();
-        return false;
-    }
-    for(int i=0;i<this->concat_user_vectors().size();i++)
-        if(this->concat_user_vectors()[i]->get_username()
-         == username||username =="admin")
-        {
-            throw UsernameError();
-            return false;
-        }
-    return true;
-}
-bool Manager::email_validation(const std::string& email)
-{
-    const std::regex pattern
-      ("(\\w+)(\\.|_)?(\\w*)@(\\w+)(\\.(\\w+))+");
-    return std::regex_match(email, pattern);
-}
-bool Manager::check_login_params(string username,string password,long unsigned int hash,MI central_info)
-{   
-    if(central_info.system_sit!=SYSTEM_QUIT&&central_info.system_sit!=NO_USER_ONLINE)
-    {
-        throw AccessError();
-        return false;
-    }
-    long unsigned int hashed = this->password_hasher(password.c_str());
-    for(int i=0;i<this->concat_user_vectors().size();i++)
-    {
-        if(this->concat_user_vectors()[i]->get_username()==username)
-        {
-            if(this->concat_user_vectors()[i]->get_password()==hashed)
-                return true;
-            else if(this->concat_user_vectors()[i]->get_password()!=hashed)
-            {
-                throw WrongPassError();
-                return false;
-            }
-        }
-    }
-    if(username=="admin"&&this->password_hasher("admin")==hashed)
-        return true;
-    return false;
-}
-long unsigned int Manager::password_hasher(const char* password)
-{
-    long unsigned int hash = 0;
-    while (*password)
-        hash = (hash * 10) + *password++ - '0';
-    return hash;   
 }

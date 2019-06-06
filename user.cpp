@@ -81,6 +81,14 @@ void User::add_bought_film(Film* f)
 {
     bought_films.push_back(f);
 }
+void User::increase_money(int m)
+{
+    money += m;
+}
+void User::decrease_money(int m)
+{
+    money -= m;
+}
 void User::add_an_unread_notice(string notice)
 {
     int id = this->get_last_unread_notice_id();

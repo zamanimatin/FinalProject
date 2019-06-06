@@ -50,7 +50,7 @@ string CommandProcessor::get_desired_info(string query,string info)
     string name;
     string desired;
     int i=0;
-    while(i != query.size()- 1&&query.size()!=ZERO)
+    while(i != query.size()- 1&&query.size()!=0)
     {
         if(query[i]!= LINE_MARK)
             name += query[i];
@@ -192,38 +192,25 @@ bool CommandProcessor::is_valid_first_part(string command)
             break;
     }
 }
-bool CommandProcessor::signup_check(string command,MI central_info)
+bool CommandProcessor::signup_check(string command)
 {
     string query = this->return_query(command);
     string username = this->get_desired_info(query,"username");
     string password = this->get_desired_info(query,"password");
     string email = this->get_desired_info(query,"email");
     string age = this->get_desired_info(query,"age");
-    string publisher_sit = this->get_desired_info(query,"publisher");
-    if(central_info.system_sit==CUSTOMER_ONLINE||
-    central_info.system_sit==PUBLISHER_ONLINE||central_info.system_sit==SYSTEM_QUIT)
-    {
-        throw AccessError();
-        return false;
-    }
     if(username.size()==0||password.size()==0||email.size()==0||age.size()==0||query.size()==0)
     {
-        throw WrongRequest();
         return false;
     }
-    if(publisher_sit.size()!=0)
-        if(publisher_sit!="true"&&publisher_sit!="false")
-        {
-            throw WrongRequest();
-            return false;
-        }
     for(int i=0;i<central_manager->concat_user_vectors().size();i++)
-        if(central_manager->concat_user_vectors()[i]->get_username()
-         == username||username =="admin")
+    {
+        if(central_manager->concat_user_vectors()[i]->get_username() == username)
         {
             throw WrongRequest();
             return false;
         }
+    }
     if(!(this->is_email_valid(email)))
     {
         throw WrongRequest();
@@ -257,19 +244,51 @@ bool CommandProcessor::is_valid_q_mark(string command)
 }
 void CommandProcessor::make_add_new_user(string command,MI& central_info)
 {
-    if(!(this->signup_check(command,central_info)))
+    if(!(this->signup_check(command)))
+    {
+        throw WrongRequest();
         return ;
+    }
     string query = this->return_query(command);
     string username = this->get_desired_info(query,"username");
-    long unsigned int password = this->hash_password(
-        this->get_desired_info(query,"password").c_str());
-    string email = this->get_desired_info(query,"email");
-    int age = stoi(this->get_desired_info(query,"age"));
+    long unsigned int password = this->hash_password(this->get_desired_info(query,"password").c_str());
     bool sit = this->check_user_sit(query);
     if(sit==true)
-        central_manager->signup_publisher(username,password,email,age,central_info);
+    {
+        vector<Film*> publisher_buy_film;
+        vector<User*> publisher_followers;
+        vector<Film*> publisher_sent_film;
+        Publisher* newpub;
+        newpub = new Publisher(central_info.central_client_id,username,password,
+            this->get_desired_info(query,"email"),
+            stoi(this->get_desired_info(query,"age")),ZERO,publisher_buy_film,
+            publisher_sent_film,publisher_followers);
+        central_manager->add_a_publisher_to_data_base(newpub);
+        central_manager->set_client_data(central_info.central_client_id,username,
+        password,this->get_desired_info(query,"email"),stoi(this->get_desired_info(query,"age")),true);
+        central_info = central_manager->change_central_info(central_info,
+        CENTRAL_CLIENT_ID,central_info.central_client_id,PUBLISHER_ONLINE);
+        central_info = central_manager->change_central_info(central_info,
+        SYSTEM_SIT,central_info.current_user_id,PUBLISHER_ONLINE);
+        cout<<"OK"<<endl;
+    }
     else if(sit == false)
-        central_manager->signup_customer(username,password,email,age,central_info);
+    {
+        vector<Film*> _bought_films;
+        vector<User*> _followed_publishers;
+        Customer* newcus = new Customer(central_info.central_client_id,username,
+        password,this->get_desired_info(query,"email"),
+        stoi(this->get_desired_info(query,"age")),ZERO,
+        _bought_films,_followed_publishers);
+        central_manager->add_a_customer_to_data_base(newcus);
+        central_manager->set_client_data(central_info.central_client_id,
+        username,password,this->get_desired_info(query,"email"),stoi(this->get_desired_info(query,"age")),false);
+        central_info = central_manager->change_central_info(central_info,
+        CENTRAL_CLIENT_ID,central_info.current_user_id,CUSTOMER_ONLINE);
+        central_info = central_manager->change_central_info(central_info,
+        SYSTEM_SIT,central_info.current_user_id,CUSTOMER_ONLINE);
+        cout<<"OK"<<endl;
+    }
 }
 bool CommandProcessor::check_user_sit(string query)
 {
@@ -303,7 +322,7 @@ bool CommandProcessor::process_show_check(string command,MI central_info)
     }
     return true;
 }
-void CommandProcessor::process_show(string command,MI& central_info)
+void CommandProcessor::process_show(string command,MI central_info)
 {
     if(!(this->process_show_check(command,central_info)))
         return;
@@ -329,26 +348,19 @@ void CommandProcessor::process_show(string command,MI& central_info)
 }
 bool CommandProcessor::first_command_check(string first_command,string command)
 {
-    string command_type = this->return_type_of_command(command);
     if(first_command!=POST_STRING||first_command!=PUT_STRING
-    ||first_command!=GET_STRING||first_command!=DELETE_STRING||
-    (command_type!="|signup|"&&command_type!="|login|"&&command_type!="|films|"
-    &&command_type!="|put_films|"&&command_type!="|delete_films|"&&
-    command_type!="|delete_comments|"&&command_type!="|logout|"
-    &&command_type!="|money|"&&command_type!="|followers|"&&
-    command_type!="|published|"&&command_type!="|replies|"&&
-    command_type!="|buy|"&&command_type!="|rate|"&&command_type!="|comments|"
-    &&command_type!="|purchased|"&&command_type!="|notifications|"
-    &&command_type!="|notifications|read|"))
+    ||first_command!=GET_STRING||first_command!=DELETE_STRING)
     {
         throw WrongRequest();
         return false;   
     }
     return true;
 }
-void CommandProcessor::run_post_strings(string command,string command_type,MI& central_info)
+void CommandProcessor::run_entered_command(string command,MI& central_info,string query)
 {
-    if(command_type =="|signup|"&&central_info.system_sit!=SYSTEM_QUIT)
+    string first_command = this->get_first_command(command);
+    string command_type = this->return_type_of_command(command);
+    if(first_command==POST_STRING && command_type =="|signup|"&&central_info.system_sit!=SYSTEM_QUIT)
     {
         try
         {
@@ -359,7 +371,7 @@ void CommandProcessor::run_post_strings(string command,string command_type,MI& c
             cout<<ex.what()<<endl;
         }
     }
-    else if(command_type=="|login|"&&central_info.system_sit!=SYSTEM_QUIT)
+    else if(first_command==POST_STRING && command_type=="|login|"&&central_info.system_sit!=SYSTEM_QUIT)
     {
         try
         {
@@ -369,7 +381,7 @@ void CommandProcessor::run_post_strings(string command,string command_type,MI& c
             cout<<ex.what()<<endl;
         }
     }
-    else if(command_type == "|films|")
+    else if(first_command==POST_STRING&& command_type == "|films|")
     {
         try
         {
@@ -379,7 +391,7 @@ void CommandProcessor::run_post_strings(string command,string command_type,MI& c
             cout<<ex.what()<<endl;
         }
     }
-    else if(command_type =="|put_films|")
+    else if(first_command==PUT_STRING&&command_type =="|films|")
     {
         try
         {
@@ -389,7 +401,7 @@ void CommandProcessor::run_post_strings(string command,string command_type,MI& c
             cout<<ex.what()<<endl;
         }
     }
-    else if(command_type=="|delete_films|")
+    else if(first_command==DELETE_STRING&&command_type=="|films|")
     {
         try
         {
@@ -399,7 +411,7 @@ void CommandProcessor::run_post_strings(string command,string command_type,MI& c
             cout<<ex.what()<<endl;
         }
     }
-    else if(command_type=="|followers|")
+    else if(first_command==POST_STRING&&command_type=="|followers|")
     {
         try
         {
@@ -409,80 +421,7 @@ void CommandProcessor::run_post_strings(string command,string command_type,MI& c
             cout<<ex.what()<<endl;
         }
     }
-    else if(command_type=="|money|")
-    {
-        try
-        {
-            this->process_post_money_command(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }       
-    }
-    else if(command_type=="|replies|")
-    {
-        try
-        {
-            this->process_reply(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }     
-    }
-    else if(command_type=="|delete_comments|")
-    {
-        try
-        {
-            this->process_delete_comments(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }     
-    }
-    else if(command_type=="|buy|")
-    {
-        try
-        {
-            this->process_buy_command(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }     
-    }
-    else if(command_type=="|rate|")
-    {
-        try
-        {
-            this->process_rate_command(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }     
-    }
-    else if(command_type=="|comments|")
-    {
-        try
-        {
-            this->process_comment_on_a_film(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }     
-    }
-    else if(command_type=="|logout|")
-    {
-        try
-        {
-            this->process_log_out(command,central_info);
-        }catch(exception& ex)
-        {
-            cout<<ex.what()<<endl;
-        }
-    }
-}
-void CommandProcessor::run_get_strings(string command,string command_type,MI& central_info)
-{
-    if(command_type=="|followers|")
+    else if(first_command==GET_STRING&&command_type=="|followers|")
     {
         try
         {
@@ -492,50 +431,117 @@ void CommandProcessor::run_get_strings(string command,string command_type,MI& ce
             cout<<ex.what()<<endl;
         }
     }
-    
-    else if(command_type=="|published|")
+    else if(first_command==POST_STRING&&command_type=="|money|")
+    {
+        try
+        {
+            this->process_post_money_command(command,central_info);
+        }
+        catch(exception& ex)
+        {
+            cout<<ex.what()<<endl;
+        }       
+    }
+    else if(first_command==GET_STRING&&command_type=="|published|")
     {
         try
         {
             this->process_show_publisher_uploaded_films(command,central_info);
-        }catch(exception& ex)
+        }
+        catch(exception& ex)
         {
             cout<<ex.what()<<endl;
         }   
     }
-    
-    else if(command_type=="|films|")
+    else if(first_command==POST_STRING&&command_type=="|replies|")
+    {
+        try
+        {
+            this->process_reply(command,central_info);
+        }
+        catch(exception& ex)
+        {
+            cout<<ex.what()<<endl;
+        }     
+    }
+    else if(first_command==DELETE_STRING&&command_type=="|comments|")
+    {
+        try
+        {
+            this->process_delete_comments(command,central_info);
+        }
+        catch(exception& ex)
+        {
+            cout<<ex.what()<<endl;
+        }     
+    }
+    else if(first_command==GET_STRING&&command_type=="|films|")
     {
         try
         {
             this->process_get_films_command(command,central_info);
-        }catch(exception& ex)
+        }
+        catch(exception& ex)
         {
             cout<<ex.what()<<endl;
         }     
     }
-    
-    else if(command_type=="|purchased|")
+    else if(first_command==POST_STRING&&command_type=="|buy|")
+    {
+        try
+        {
+            this->process_buy_command(command,central_info);
+        }
+        catch(exception& ex)
+        {
+            cout<<ex.what()<<endl;
+        }     
+    }
+    else if(first_command==POST_STRING&&command_type=="|rate|")
+    {
+        try
+        {
+            this->process_rate_command(command,central_info);
+        }
+        catch(exception& ex)
+        {
+            cout<<ex.what()<<endl;
+        }     
+    }
+    else if(first_command==POST_STRING&&command_type=="|comments|")
+    {
+        try
+        {
+            this->process_comment_on_a_film(command,central_info);
+        }
+        catch(exception& ex)
+        {
+            cout<<ex.what()<<endl;
+        }     
+    }
+    else if(first_command==GET_STRING&&command_type=="|purchased|")
     {
         try
         {
             this->process_show(command,central_info);
-        }catch(exception& ex)
+        }
+        catch(exception& ex)
         {
             cout<<ex.what()<<endl;
         }     
     }
-    else if(command_type=="|notifications|")
+    else if(first_command==GET_STRING&&command_type=="|notifications|")
     {
         try
         {
             this->process_unread_notices(command,central_info);
-        }catch(exception& ex)
+        }
+        catch(exception& ex)
         {
             cout<<ex.what()<<endl;
         }     
     }
-    else if(command_type=="|notifications|read|")
+    else if(first_command==GET_STRING&&command_type=="|notifications|read|")
     {
         try
         {
@@ -546,26 +552,6 @@ void CommandProcessor::run_get_strings(string command,string command_type,MI& ce
             cout<<ex.what()<<endl;
         }
     }
-    
-    else if(command_type=="|money|")
-    {
-        try
-        {
-            this->process_get_money(command,central_info);
-        }catch(exception& ex)
-        {  
-            cout<<ex.what()<<endl;
-        }
-    }
-}
-void CommandProcessor::run_entered_command(string command,MI& central_info,string query)
-{
-    string first_command = this->get_first_command(command);
-    string command_type = this->return_type_of_command(command);
-    if(first_command==POST_STRING)
-        this->run_post_strings(command,command_type,central_info);
-    else if(first_command==GET_STRING)
-        this->run_get_strings(command,command_type,central_info);
     else
     {
         try
@@ -578,7 +564,29 @@ void CommandProcessor::run_entered_command(string command,MI& central_info,strin
     }
     
 }
-bool CommandProcessor::get_money_check(string command,MI central_info)
+bool CommandProcessor::check_show_all_read_notices(string command,MI central_info)
+{
+    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
+    {
+        throw AccessError();
+        return false;
+    }
+    string query = this->return_query(command);
+    string limit = this->get_desired_info(query,"limit");
+    if(query.size()==0||limit.size()==0)
+    {
+        throw WrongRequest();
+        return false;
+    }
+}
+void CommandProcessor::process_show_all_read_notices(string command,MI central_info)
+{   
+    if(!(this->check_show_all_read_notices(command,central_info)))
+        return;
+    int limit = stoi(this->get_desired_info(this->return_query(command),"limit"));
+    central_manager->show_read_notices_for_user(limit);
+}
+bool CommandProcessor::check_process_unread_notices(string command,MI central_info)
 {
     if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
     {
@@ -593,74 +601,7 @@ bool CommandProcessor::get_money_check(string command,MI central_info)
     }
     return true;
 }
-void CommandProcessor::process_get_money(string command,MI& central_info)
-{
-    if(!(this->get_money_check(command,central_info)))
-        return ;
-    central_manager->show_get_money(central_info);
-}
-bool CommandProcessor::log_out_check(string command,MI central_info)
-{
-    string query = this->return_query(command);
-    if(central_info.system_sit==NO_USER_ONLINE||central_info.system_sit==SYSTEM_QUIT)
-    {
-        throw WrongRequest();
-        return false;
-    }
-    if(query.size()!=0)
-    {
-        throw WrongRequest();
-        return false;
-    }
-    return true;
-}
-void CommandProcessor::process_log_out(string command,MI& central_info)
-{
-    if(!(this->log_out_check(command,central_info)))
-        return ;
-    central_info = central_manager->change_central_info(central_info,SYSTEM_SIT,ZERO,NO_USER_ONLINE);
-    cout<<"OK"<<endl;
-}
-bool CommandProcessor::check_show_all_read_notices(string command,MI central_info)
-{
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
-    {
-        throw AccessError();
-        return false;
-    }
-    string query = this->return_query(command);
-    string limit = this->get_desired_info(query,"limit");
-    if(query.size()==0||limit.size()==0)
-    {
-        throw WrongRequest();
-        return false;
-    }
-}
-void CommandProcessor::process_show_all_read_notices(string command,MI& central_info)
-{   
-    if(!(this->check_show_all_read_notices(command,central_info)))
-        return;
-    int limit = stoi(this->get_desired_info(this->return_query(command),"limit"));
-    central_manager->show_read_notices_for_user(limit);
-}
-bool CommandProcessor::check_process_unread_notices(string command,MI central_info)
-{
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
-    {
-        throw AccessError();
-        return false;
-    }
-    string query = this->return_query(command);
-    if(query.size()!=0)
-    {
-        throw WrongRequest();
-        return false;
-    }
-    return true;
-}
-void CommandProcessor::process_unread_notices(string command,MI& central_info)
+void CommandProcessor::process_unread_notices(string command,MI central_info)
 {
     if(!(this->check_process_unread_notices(command,central_info)))
         return ;
@@ -668,8 +609,7 @@ void CommandProcessor::process_unread_notices(string command,MI& central_info)
 }
 bool CommandProcessor::check_process_comment_on_a_film(string command,MI central_info)
 {
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -691,15 +631,14 @@ bool CommandProcessor::check_process_comment_on_a_film(string command,MI central
         {
             return true;   
         }
-        else if(des->get_id()==usr->get_bought_films()[i]->get_id()
-        &&i==usr->get_bought_films().size()-ONE)
+        else if(des->get_id()==usr->get_bought_films()[i]->get_id()&&i==usr->get_bought_films().size()-ONE)
         {
             throw ExistenceError();
             return false;
         }
     }
 }
-void CommandProcessor::process_comment_on_a_film(string command,MI& central_info)
+void CommandProcessor::process_comment_on_a_film(string command,MI central_info)
 {
     if(!(this->check_process_comment_on_a_film(command,central_info)))
         return ;
@@ -710,8 +649,7 @@ void CommandProcessor::process_comment_on_a_film(string command,MI& central_info
 } 
 bool CommandProcessor::check_process_rate(string command,MI central_info)
 {
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -731,6 +669,7 @@ bool CommandProcessor::check_process_rate(string command,MI central_info)
         throw WrongRequest();
         return false;
     }
+    Film* des = central_manager->find_film_with_id(fid);
     if(!(central_manager->is_film_exists(fid)))
     {
         throw ExistenceError();
@@ -738,8 +677,9 @@ bool CommandProcessor::check_process_rate(string command,MI central_info)
     }
     return true;
 }
-void CommandProcessor::process_rate_command(string command,MI& central_info)
+void CommandProcessor::process_rate_command(string command,MI central_info)
 {
+    cout<<"here"<<endl;
     if(!(this->check_process_rate(command,central_info)))
         return ;
     string query = this->return_query(command);
@@ -749,8 +689,7 @@ void CommandProcessor::process_rate_command(string command,MI& central_info)
 }
 bool CommandProcessor::check_process_buy(string command,MI central_info)
 {
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -783,7 +722,7 @@ bool CommandProcessor::check_process_buy(string command,MI central_info)
         }
     }
 }
-void CommandProcessor::process_buy_command(string command,MI& central_info)
+void CommandProcessor::process_buy_command(string command,MI central_info)
 {
     if(!(this->check_process_buy(command,central_info)))
         return ;
@@ -793,7 +732,7 @@ void CommandProcessor::process_buy_command(string command,MI& central_info)
 }
 bool CommandProcessor::check_show_publisher_uploaded_films(string command,MI central_info)
 {
-    if(central_info.system_sit!=PUBLISHER_ONLINE||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit!=PUBLISHER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -814,7 +753,7 @@ bool CommandProcessor::check_show_publisher_uploaded_films(string command,MI cen
     }
     return true;
 }
-void CommandProcessor::process_show_publisher_uploaded_films(string command,MI& central_info)
+void CommandProcessor::process_show_publisher_uploaded_films(string command,MI central_info)
 {
     if(!(this->check_show_publisher_uploaded_films(command,central_info)))
         return ;
@@ -835,10 +774,10 @@ void CommandProcessor::process_show_publisher_uploaded_films(string command,MI& 
 
     central_manager->show_publisher_uploaded_films(name,min_rate,min_year,price,max_year,director);
 }
-bool CommandProcessor::check_show_publisher_follow_list(string command,MI central_info)
+bool CommandProcessor::check_show_publisher_follow_list(string command,MI centra_info)
 {
     string query = this->return_query(command);
-    if(central_info.system_sit!=PUBLISHER_ONLINE||central_info.system_sit==ADMIN_ONLINE)
+    if(centra_info.system_sit!=PUBLISHER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -850,7 +789,7 @@ bool CommandProcessor::check_show_publisher_follow_list(string command,MI centra
     }
     return true;
 }
-void CommandProcessor::process_show_publisher_follow_list(string command,MI& central_info)
+void CommandProcessor::process_show_publisher_follow_list(string command,MI central_info)
 {
     if(!(this->check_show_publisher_follow_list(command,central_info)))
         return;
@@ -858,9 +797,9 @@ void CommandProcessor::process_show_publisher_follow_list(string command,MI& cen
 }
 bool CommandProcessor::check_process_follow(string command,MI central_info)
 {
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
     {
+
         throw AccessError();
         return false;
     }
@@ -880,7 +819,7 @@ bool CommandProcessor::check_process_follow(string command,MI central_info)
     throw ExistenceError();
     return false;
 }
-void CommandProcessor::process_follow_a_publisher(string command,MI& central_info)
+void CommandProcessor::process_follow_a_publisher(string command,MI central_info)
 {
     if(!(this->check_process_follow(command,central_info)))
         return ;
@@ -896,7 +835,7 @@ void CommandProcessor::process_follow_a_publisher(string command,MI& central_inf
 bool CommandProcessor::check_post_money(string command,MI central_info)
 {
     string query = this->return_query(command);
-    if(central_info.system_sit==NO_USER_ONLINE||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit==NO_USER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -908,7 +847,7 @@ bool CommandProcessor::check_post_money(string command,MI central_info)
     }
     return true;
 }
-void CommandProcessor::process_post_money_command(string command,MI& central_info)
+void CommandProcessor::process_post_money_command(string command,MI central_info)
 {
     if(!(this->check_post_money(command,central_info)))
     {
@@ -924,7 +863,7 @@ void CommandProcessor::process_post_money_command(string command,MI& central_inf
 }
 bool CommandProcessor::remove_film_check(string command,MI central_info)
 {
-    if(central_info.system_sit!=PUBLISHER_ONLINE||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit!=PUBLISHER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -947,7 +886,7 @@ bool CommandProcessor::remove_film_check(string command,MI central_info)
     throw ExistenceError();
     return false;
 }
-void CommandProcessor::process_delete_film(string command,MI& central_info)
+void CommandProcessor::process_delete_film(string command,MI central_info)
 {
     if(!(this->remove_film_check(command,central_info)))
     {
@@ -963,9 +902,8 @@ void CommandProcessor::process_delete_film(string command,MI& central_info)
 }
 bool CommandProcessor::check_comment_errors(string command, MI central_info)
 {
-    if(central_info.system_sit!=PUBLISHER_ONLINE||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit!=PUBLISHER_ONLINE)
     {
-        
         throw AccessError();
         return false;
     }
@@ -1018,7 +956,7 @@ bool CommandProcessor::check_process_reply(string command,MI central_info)
     }
     return true;
 }
-void CommandProcessor::process_reply(string command,MI& central_info)
+void CommandProcessor::process_reply(string command,MI central_info)
 {
     if(!(this->check_process_reply(command,central_info)))
         return ;
@@ -1035,7 +973,7 @@ void CommandProcessor::process_reply(string command,MI& central_info)
         central_manager->reply_to_a_comment_for_publisher(film_id,comment_id,content);
     }
 }
-void CommandProcessor::process_delete_comments(string command,MI& central_info)
+void CommandProcessor::process_delete_comments(string command,MI central_info)
 {
     if(!(this->check_comment_errors(command,central_info)))
         return;
@@ -1051,8 +989,7 @@ void CommandProcessor::process_delete_comments(string command,MI& central_info)
 }
 bool CommandProcessor::check_process_get_films(string command,MI central_info)
 {
-    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==NO_USER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -1079,7 +1016,7 @@ bool CommandProcessor::first_check(string command)
     }
     return true;
 }
-void CommandProcessor::process_get_films_command(string command,MI& central_info)
+void CommandProcessor::process_get_films_command(string command,MI central_info)
 {
     if(!(this->check_process_get_films(command,central_info)))
         return ;
@@ -1120,8 +1057,7 @@ void CommandProcessor::process_get_films_command(string command,MI& central_info
 }
 bool CommandProcessor::edit_film_check(string command,MI central_info)
 {
-    if(central_info.system_sit!=PUBLISHER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit!=PUBLISHER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -1153,8 +1089,7 @@ void CommandProcessor::edit_a_film_data_for_a_publisher(string command,MI centra
 }
 bool CommandProcessor::add_film_check(string command,MI central_info)
 {
-    if(central_info.system_sit!=PUBLISHER_ONLINE
-    ||central_info.system_sit==ADMIN_ONLINE)
+    if(central_info.system_sit!=PUBLISHER_ONLINE)
     {
         throw AccessError();
         return false;
@@ -1173,27 +1108,6 @@ bool CommandProcessor::add_film_check(string command,MI central_info)
         return false;
     }
     return true;
-}
-void CommandProcessor::add_film_for_a_publisher(string name,string Year,string Length,
-string Price,string summary,string rate,string director,MI& central_info)
-{
-    int price = stoi(Price);
-    int year = stoi(Year);
-    int length = stoi(Length);
-    Film* new_film = new Film(central_info.current_user_id,name,
-            central_info.central_film_id,ZERO,price,year,director,length,summary);
-    for(int i=0;i<central_manager->get_data_base_all_publishers().size();i++)
-    {
-        if(central_info.current_user_id == central_manager->get_data_base_all_publishers()[i]->get_id())
-        {
-            central_manager->get_data_base_all_publishers()[i]->add_an_uploaded_film(new_film);
-            central_manager->change_central_info(central_info,
-            CENTRAL_FILM_ID,central_info.current_user_id,PUBLISHER_ONLINE);
-            central_manager->get_data_base_all_publishers()[i]->send_new_film_notice();   
-            central_manager->add_a_film_to_data_base(new_film);
-            cout<<"OK"<<endl;
-        }
-    }
 }
 void CommandProcessor::add_film_for_a_publisher(string command,MI& central_info)
 {
@@ -1228,50 +1142,61 @@ bool CommandProcessor::login_check(string command,MI central_info)
     string query = this->return_query(command);
     string username = this->get_desired_info(query,"username");
     string password = this->get_desired_info(query,"password");
-    if(central_info.system_sit==CUSTOMER_ONLINE||central_info.system_sit==PUBLISHER_ONLINE||
-    central_info.system_sit==SYSTEM_QUIT||central_info.system_sit==ADMIN_ONLINE)
-    {
-        throw AccessError();
+    if(username.size()==0||password.size()==0||central_info.system_sit==NO_USER_ONLINE||query.size()==0)
         return false;
-    }
-    if(username.size()==0||password.size()==0)
-    {
-        throw WrongRequest();
-        return false;
-    }
     long unsigned int hashed_password = this->hash_password(password.c_str());
     for(int i=0;i<central_manager->concat_user_vectors().size();i++)
+    {
         if(central_manager->concat_user_vectors()[i]->get_username() == username)
         {
             if(central_manager->concat_user_vectors()[i]->get_password() == hashed_password)
-            {
                 return true;
-            }
-            else if(central_manager->concat_user_vectors()[i]->get_password() != hashed_password)
-            {
-                throw AccessError();
-                return false;
-            }
         }
-    if(username=="admin"&&this->hash_password("admin")==hashed_password)
-        return true;
-    throw ExistenceError();
+    }
+    throw WrongRequest();
     return false;
 }
 void CommandProcessor::login_user(string command,MI& central_info)
 {
     if(!(this->login_check(command,central_info)))
+    {
+        throw WrongRequest();
         return ;
+    }
     string query = this->return_query(command);
     string username = this->get_desired_info(query,"username");
-    string password = this->get_desired_info(query,"password");
-    long unsigned int hashed_password = this->hash_password(password.c_str());
-    if(central_manager->is_publisher(username))
-        central_manager->login_publisher(username,central_info);
-    else if(central_manager->is_customer(username))
-        central_manager->login_customer(username,central_info);
-    else if(central_manager->is_admin(username))       
-        central_manager->login_admin(username,hashed_password,central_info);
+    long unsigned int password = this->hash_password((this->get_desired_info(query,"password").c_str()));
+    for(int i=0;i<central_manager->get_data_base_all_publishers().size();i++)
+    {
+        if(username == central_manager->get_data_base_all_publishers()[i]->get_username())
+        {
+            central_manager->change_central_info(central_info,
+            SYSTEM_SIT,central_manager->get_data_base_all_publishers()[i]->get_id(),PUBLISHER_ONLINE);
+            central_manager->set_client_data(central_manager->get_data_base_all_publishers()[i]->get_id(),
+            central_manager->get_data_base_all_publishers()[i]->get_username(),
+            central_manager->get_data_base_all_publishers()[i]->get_password(),
+            central_manager->get_data_base_all_publishers()[i]->get_email(),
+            central_manager->get_data_base_all_publishers()[i]->get_age(),true);
+            cout<<"OK"<<endl;
+            return ;
+        }
+    }       
+    for(int i=0;i<central_manager->get_data_base_all_customers().size();i++)
+    {
+        if(username == central_manager->get_data_base_all_customers()[i]->get_username())
+        {
+            central_manager->change_central_info(central_info,
+            SYSTEM_SIT,central_manager->get_data_base_all_customers()[i]->get_id(),CUSTOMER_ONLINE);
+            central_manager->set_client_data(central_manager->get_data_base_all_customers()[i]->get_id(),
+            central_manager->get_data_base_all_customers()[i]->get_username(),
+            central_manager->get_data_base_all_customers()[i]->get_password(),
+            central_manager->get_data_base_all_customers()[i]->get_email(),
+            central_manager->get_data_base_all_customers()[i]->get_age(),false);
+            cout<<"OK"<<endl;
+            return ;
+        }
+    }
+    throw WrongRequest();
 }
 bool CommandProcessor::is_email_valid(const std::string& email)
 {
